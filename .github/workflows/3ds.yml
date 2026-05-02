@@ -8,52 +8,38 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    container:
+      image: devkitpro/devkitarm
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y git make cmake build-essential
-
-      - name: Install devkitPro
-        run: |
-          sudo mkdir -p /opt/devkitpro
-
-          echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
-          echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
-
-      - name: Install 3DS tools (fake setup placeholder)
-        run: |
-          echo "⚠️ You must preinstall devkitARM toolchain properly"
-          echo "In real setup, use devkitPro installer or container"
-
-      - name: Build project (.3dsx)
+      - name: Build 3DS homebrew
         run: |
           make
 
-      - name: Prepare CIA folder
-        run: |
-          mkdir -p cia
-          cp *.3dsx cia/ || true
+      - name: Check output
+        run: ls -la
 
-      - name: Build CIA (makerom)
+      - name: Build CIA
         run: |
-          echo "Building CIA..."
+          mkdir out
+          cp *.3dsx out/ || true
 
-          for file in cia/*.3dsx; do
-            name=$(basename "$file" .3dsx)
+          for f in out/*.3dsx; do
+            [ -f "$f" ] || continue
+            name=$(basename "$f" .3dsx)
 
             makerom -f cia \
               -o "$name.cia" \
               -target t \
               -exefslogo \
-              -elf "$file" || true
+              -elf "$f"
           done
 
       - name: Upload CIA
         uses: actions/upload-artifact@v4
         with:
-          name: FreddyFazbearShop-CIA
-          path: "*.cia"
+          name: CIA
+          path: out/*.cia
